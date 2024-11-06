@@ -1,9 +1,11 @@
 mod camera;
+mod objects;
 mod ppm;
 mod ray;
 mod types;
 
 use camera::{Camera, Viewport};
+use objects::{sphere, View};
 use ppm::image::Ppm;
 use ray::Ray;
 use types::{Color, Point3};
@@ -30,6 +32,12 @@ fn main() {
     let camera = Camera::new(Point3::new(0.0, 0.0, 0.0), 1.0);
     let viewport = Viewport::new(2.0, img_w as u32, img_h as u32);
 
+    let s = sphere::Sphere::new(
+        Point3::new(0.0, 0.0, -1.0),
+        0.5_f64,
+        Color::new(1.0, 0.0, 0.0),
+    );
+
     for j in 0..img_h {
         for i in 0..img_w {
             let pixel = viewport.origin(&camera)
@@ -37,15 +45,26 @@ fn main() {
                 + (f64::from(j as u32) * viewport.dv());
             let ray_direction = pixel.clone() - camera.position();
             let ray = Ray::new(pixel, ray_direction);
-            let pixel_color = ray.color();
 
-            img.set(
-                i,
-                j,
-                color_get_level(pixel_color.x()),
-                color_get_level(pixel_color.y()),
-                color_get_level(pixel_color.z()),
-            );
+            if s.hit(&ray) {
+                img.set(
+                    i,
+                    j,
+                    color_get_level(s.color().x()),
+                    color_get_level(s.color().y()),
+                    color_get_level(s.color().z()),
+                );
+            } else {
+                let pixel_color = ray.color();
+
+                img.set(
+                    i,
+                    j,
+                    color_get_level(pixel_color.x()),
+                    color_get_level(pixel_color.y()),
+                    color_get_level(pixel_color.z()),
+                );
+            }
         }
     }
     println!("{}", img);
