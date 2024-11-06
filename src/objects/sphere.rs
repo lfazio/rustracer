@@ -28,12 +28,17 @@ impl Sphere {
 }
 
 impl View for Sphere {
-    fn hit(&self, ray: &Ray) -> bool {
+    fn hit(&self, ray: &Ray) -> Option<f64> {
         let oc = self.o() - ray.origin();
         let a = ray.direction().dot(&ray.direction());
-        let b = -2.0 * ray.direction().dot(&oc);
+        let h = ray.direction().dot(&oc);
         let c = oc.dot(&oc) - self.r() * self.r();
+        let discriminant = h * h - (a * c);
 
-        (b * b - 4.0 * a * c) >= 0.0
+        if discriminant < 0.0 {
+            None
+        } else {
+            Some((h - f64::sqrt(discriminant)) / a)
+        }
     }
 }

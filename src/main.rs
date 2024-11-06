@@ -8,7 +8,7 @@ use camera::{Camera, Viewport};
 use objects::{sphere, View};
 use ppm::image::Ppm;
 use ray::Ray;
-use types::{Color, Point3};
+use types::{Color, Point3, Vec3};
 
 fn f64_convert(x: f64) -> u32 {
     x.round().rem_euclid(2f64.powi(32)) as u32
@@ -46,24 +46,30 @@ fn main() {
             let ray_direction = pixel.clone() - camera.position();
             let ray = Ray::new(pixel, ray_direction);
 
-            if s.hit(&ray) {
-                img.set(
-                    i,
-                    j,
-                    color_get_level(s.color().x()),
-                    color_get_level(s.color().y()),
-                    color_get_level(s.color().z()),
-                );
-            } else {
-                let pixel_color = ray.color();
+            match s.hit(&ray) {
+                Some(t) => {
+                    let v = ray.at(t) - Vec3::new(0.0, 0.0, -1.0);
+                    let n = v.normalise();
+                    img.set(
+                        i,
+                        j,
+                        color_get_level((n.x() + 1.0) / 2.0),
+                        color_get_level((n.y() + 1.0) / 2.0),
+                        color_get_level((n.z() + 1.0) / 2.0),
+                    );
+                }
 
-                img.set(
-                    i,
-                    j,
-                    color_get_level(pixel_color.x()),
-                    color_get_level(pixel_color.y()),
-                    color_get_level(pixel_color.z()),
-                );
+                None => {
+                    let pixel_color = ray.color();
+
+                    img.set(
+                        i,
+                        j,
+                        color_get_level(pixel_color.x()),
+                        color_get_level(pixel_color.y()),
+                        color_get_level(pixel_color.z()),
+                    );
+                }
             }
         }
     }
