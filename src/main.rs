@@ -1,14 +1,16 @@
 mod camera;
+mod interval;
 mod objects;
 mod ppm;
 mod ray;
 mod types;
 
 use camera::{Camera, Viewport};
-use objects::{sphere, View};
+use interval::Interval;
+use objects::{sphere, HitRecord, Hittable, HittableList};
 use ppm::image::Ppm;
 use ray::Ray;
-use types::{Color, Point3, Vec3};
+use types::{Color, Point3};
 
 fn f64_convert(x: f64) -> u32 {
     x.round().rem_euclid(2f64.powi(32)) as u32
@@ -32,11 +34,20 @@ fn main() {
     let camera = Camera::new(Point3::new(0.0, 0.0, 0.0), 1.0);
     let viewport = Viewport::new(2.0, img_w as u32, img_h as u32);
 
-    let s = sphere::Sphere::new(
+    let mut world = HittableList::new();
+    let binding = sphere::Sphere::new(
         Point3::new(0.0, 0.0, -1.0),
         0.5_f64,
         Color::new(1.0, 0.0, 0.0),
     );
+    world.add(&binding);
+
+    let binding = sphere::Sphere::new(
+        Point3::new(0.0, -100.5, -1.0),
+        100_f64,
+        Color::new(0.0, 1.0, 0.0),
+    );
+    world.add(&binding);
 
     for j in 0..img_h {
         for i in 0..img_w {
@@ -45,32 +56,33 @@ fn main() {
                 + (f64::from(j as u32) * viewport.dv());
             let ray_direction = pixel.clone() - camera.position();
             let ray = Ray::new(pixel, ray_direction);
+            let rayt = Interval::new(0.0, f64::INFINITY);
 
-            match s.hit(&ray) {
-                Some(t) => {
-                    let v = ray.at(t) - Vec3::new(0.0, 0.0, -1.0);
-                    let n = v.normalise();
-                    img.set(
-                        i,
-                        j,
-                        color_get_level((n.x() + 1.0) / 2.0),
-                        color_get_level((n.y() + 1.0) / 2.0),
-                        color_get_level((n.z() + 1.0) / 2.0),
-                    );
+            let r: f64;
+            let g: f64;
+            let b: f64;
+
+            match world.hit(&ray, &rayt) {
+                Some(rec) => {
+                    let normal = &rec.normal;
+                    r = (normal.x() + 1.0) / 2.0;
+                    g = (normal.y() + 1.0) / 2.0;
+                    b = (normal.z() + 1.0) / 2.0;
                 }
-
                 None => {
-                    let pixel_color = ray.color();
-
-                    img.set(
-                        i,
-                        j,
-                        color_get_level(pixel_color.x()),
-                        color_get_level(pixel_color.y()),
-                        color_get_level(pixel_color.z()),
-                    );
+                    r = ray.color().x();
+                    g = ray.color().y();
+                    b = ray.color().z();
                 }
             }
+
+            img.set(
+                i,
+                j,
+                color_get_level(r),
+                color_get_level(g),
+                color_get_level(b),
+            );
         }
     }
     println!("{}", img);
