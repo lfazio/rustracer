@@ -31,9 +31,18 @@ fn f64_convert(x: f64) -> u32 {
     x.round().rem_euclid(2f64.powi(32)) as u32
 }
 
+fn linear_to_gamma(linear_component: f64) -> f64 {
+    if linear_component > 0.0 {
+        return f64::sqrt(linear_component);
+    }
+
+    0.0
+}
+
 fn color_get_level(v: f64) -> u8 {
+    let c = linear_to_gamma(v);
     let intensity = Interval::new(0.0, 1.0);
-    f64_convert(intensity.clamp(v) * 255_f64) as u8
+    f64_convert(intensity.clamp(c) * 255_f64) as u8
 }
 
 impl Camera {
