@@ -15,6 +15,7 @@ pub struct Camera {
     img_w: u32,
     img_h: u32,
     samples_per_pixel: u32,
+    max_depth: u32,
     viewport: Viewport,
 }
 
@@ -36,7 +37,14 @@ fn color_get_level(v: f64) -> u8 {
 }
 
 impl Camera {
-    pub fn new(position: Point3, f: f64, ratio: f64, img_w: u32, antialiasing: u32) -> Camera {
+    pub fn new(
+        position: Point3,
+        f: f64,
+        ratio: f64,
+        img_w: u32,
+        antialiasing: u32,
+        max_depth: u32,
+    ) -> Camera {
         let img_h = if (f64::from(img_w) / ratio) < 1_f64 {
             1
         } else {
@@ -49,6 +57,7 @@ impl Camera {
             img_w,
             img_h,
             samples_per_pixel: antialiasing,
+            max_depth,
             viewport: Viewport::new(2.0, img_w, img_h),
         }
     }
@@ -64,7 +73,7 @@ impl Camera {
             for i in 0..self.img_w {
                 let mut color = Color::new(0.0, 0.0, 0.0);
                 for _ in 0..self.samples_per_pixel {
-                    color += self.ray_color(&self.get_ray(i, j), world);
+                    color += self.ray_color(&self.get_ray(i, j), self.max_depth, world);
                 }
                 color /= f64::from(self.samples_per_pixel);
 
@@ -94,17 +103,23 @@ impl Camera {
         Ray::new(self.position.clone(), pixel_sample - self.position.clone())
     }
 
-    fn ray_color(&self, ray: &Ray, world: &HittableList) -> Color {
+    fn ray_color(&self, ray: &Ray, depth: u32, world: &HittableList) -> Color {
         let r: f64;
         let g: f64;
         let b: f64;
 
-        match world.hit(ray, &Interval::new(0.0, f64::INFINITY)) {
+        if depth == 0 {
+            return Color::new(0.0, 0.0, 0.0);
+        }
+
+        match world.hit(ray, &Interval::new(0.001, f64::INFINITY)) {
             Some(rec) => {
-                let normal = &rec.normal;
-                r = (normal.x() + 1.0) / 2.0;
-                g = (normal.y() + 1.0) / 2.0;
-                b = (normal.z() + 1.0) / 2.0;
+                let direction = rec.normal + Vec3::random_unit();
+                let mut c = self.ray_color(&Ray::new(rec.p, direction), depth - 1, world);
+                c /= 2.0;
+                r = c.x();
+                g = c.y();
+                b = c.z();
             }
             None => {
                 r = ray.color().x();

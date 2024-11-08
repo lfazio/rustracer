@@ -1,3 +1,5 @@
+extern crate fastrand;
+
 use std::cmp;
 use std::fmt;
 use std::ops;
@@ -18,6 +20,41 @@ impl Vec3 {
             x: e0,
             y: e1,
             z: e2,
+        }
+    }
+
+    fn random(&self) -> Vec3 {
+        Vec3 {
+            x: fastrand::f64(),
+            y: fastrand::f64(),
+            z: fastrand::f64(),
+        }
+    }
+
+    fn random_range(min: f64, max: f64) -> Vec3 {
+        Vec3 {
+            x: min + fastrand::f64() * (max - min),
+            y: min + fastrand::f64() * (max - min),
+            z: min + fastrand::f64() * (max - min),
+        }
+    }
+
+    pub fn random_unit() -> Vec3 {
+        loop {
+            let p = Vec3::random_range(-1.0, 1.0);
+            let lensq = p.dot(&p);
+            if 1e-160 < lensq && lensq < 1.0 {
+                return p / lensq;
+            }
+        }
+    }
+
+    pub fn random_on_hemisphere(normal: &Vec3) -> Vec3 {
+        let on_unit_sphere = Vec3::random_unit();
+        if on_unit_sphere.dot(normal) > 0.0 {
+            on_unit_sphere
+        } else {
+            -1.0 * on_unit_sphere
         }
     }
 

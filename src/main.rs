@@ -10,7 +10,7 @@ use objects::{sphere, HittableList};
 use types::{Color, Point3};
 
 fn main() {
-    let camera = Camera::new(Point3::new(0.0, 0.0, 0.0), 1.0, 16_f64 / 9_f64, 640, 32);
+    let camera = Camera::new(Point3::new(0.0, 0.0, 0.0), 1.0, 16_f64 / 9_f64, 640, 32, 16);
 
     let mut world = HittableList::new();
     let binding = sphere::Sphere::new(
