@@ -5,7 +5,7 @@ use crate::{
     objects::{Hittable, HittableList},
     ppm::image::Ppm,
     ray::Ray,
-    types::{Color, Point3, Vec3},
+    vec3::{Color, Point3, Vec3},
 };
 
 #[derive(Debug, Default)]
@@ -122,14 +122,12 @@ impl Camera {
         }
 
         match world.hit(ray, &Interval::new(0.001, f64::INFINITY)) {
-            Some(rec) => {
-                let direction = rec.normal + Vec3::random_unit();
-                let mut c = self.ray_color(&Ray::new(rec.p, direction), depth - 1, world);
-                c /= 2.0;
-                r = c.x();
-                g = c.y();
-                b = c.z();
-            }
+            Some(rec) => match rec.mat.scatter(ray, &rec) {
+                Some((scattered, attenuation)) => {
+                    return attenuation * self.ray_color(&scattered, depth - 1, world);
+                }
+                None => return Color::new(0.0, 0.0, 0.0),
+            },
             None => {
                 r = ray.color().x();
                 g = ray.color().y();

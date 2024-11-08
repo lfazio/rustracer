@@ -58,6 +58,10 @@ impl Vec3 {
         }
     }
 
+    pub fn reflect(v: Vec3, n: Vec3) -> Vec3 {
+        v.clone() - 2.0 * v.dot(&n) * n
+    }
+
     pub fn x(&self) -> f64 {
         self.x
     }
@@ -88,6 +92,11 @@ impl Vec3 {
             self.z() * rhs.x() - self.x() * rhs.z(),
             self.x() * rhs.y() - self.y() * rhs.x(),
         )
+    }
+
+    pub fn near_zero(&self) -> bool {
+        let s = 1e-8;
+        f64::abs(self.x()) < s && f64::abs(self.y()) < s && f64::abs(self.z()) < s
     }
 }
 
@@ -132,6 +141,14 @@ impl ops::SubAssign for Vec3 {
         self.x -= rhs.x();
         self.y -= rhs.y();
         self.z -= rhs.z();
+    }
+}
+
+impl ops::Mul for Vec3 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: Vec3) -> Vec3 {
+        Vec3::new(self.x() * rhs.x(), self.y() * rhs.y(), self.z() * rhs.z())
     }
 }
 
