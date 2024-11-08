@@ -5,25 +5,25 @@ use crate::ppm::color::PpmColor;
 #[derive(Debug)]
 pub struct Ppm {
     magic: u8,
-    w: usize,
-    h: usize,
-    depth: usize,
+    w: u32,
+    h: u32,
+    depth: u32,
     body: Vec<PpmColor>,
 }
 
 impl Ppm {
-    pub fn new(w: usize, h: usize, depth: usize) -> Ppm {
+    pub fn new(w: u32, h: u32, depth: u32) -> Ppm {
         Ppm {
             magic: 3,
             w,
             h,
             depth: depth - 1,
-            body: vec![PpmColor::new(0, 0, 0); w * h],
+            body: vec![PpmColor::new(0, 0, 0); (w * h) as usize],
         }
     }
 
-    pub fn set(&mut self, x: usize, y: usize, r: u8, g: u8, b: u8) {
-        self.body[y * self.w + x].set(r, g, b)
+    pub fn set(&mut self, x: u32, y: u32, r: u8, g: u8, b: u8) {
+        self.body[(y * self.w + x) as usize].set(r, g, b)
     }
 }
 
