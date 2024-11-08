@@ -1,4 +1,4 @@
-use core::f64;
+extern crate fastrand;
 
 use crate::{
     interval::Interval,
@@ -14,6 +14,8 @@ pub struct Camera {
     f: f64, // focal length
     img_w: u32,
     img_h: u32,
+    samples_per_pixel: u32,
+    viewport: Viewport,
 }
 
 #[derive(Debug, Default)]
@@ -29,21 +31,25 @@ fn f64_convert(x: f64) -> u32 {
 }
 
 fn color_get_level(v: f64) -> u8 {
-    let i = Interval::new(0.0, 1.0);
-    f64_convert(i.clamp(v) * 255_f64) as u8
+    let intensity = Interval::new(0.0, 1.0);
+    f64_convert(intensity.clamp(v) * 255_f64) as u8
 }
 
 impl Camera {
-    pub fn new(position: Point3, f: f64, ratio: f64, img_w: u32) -> Camera {
+    pub fn new(position: Point3, f: f64, ratio: f64, img_w: u32, antialiasing: u32) -> Camera {
+        let img_h = if (f64::from(img_w) / ratio) < 1_f64 {
+            1
+        } else {
+            f64_convert(f64::from(img_w) / ratio)
+        };
+
         Camera {
             position,
             f,
             img_w,
-            img_h: if (f64::from(img_w) / ratio) < 1_f64 {
-                1
-            } else {
-                f64_convert(f64::from(img_w) / ratio)
-            },
+            img_h,
+            samples_per_pixel: antialiasing,
+            viewport: Viewport::new(2.0, img_w, img_h),
         }
     }
 
@@ -51,37 +57,49 @@ impl Camera {
         self.f
     }
 
-    pub fn position(&self) -> Point3 {
-        self.position.clone()
-    }
-
     pub fn render(&self, world: &HittableList) {
         let mut img = Ppm::new(self.img_w, self.img_h, 256);
-        let viewport = Viewport::new(2.0, self.img_w, self.img_h);
 
         for j in 0..self.img_h {
             for i in 0..self.img_w {
-                let pixel = viewport.origin(self)
-                    + (f64::from(i) * viewport.du())
-                    + (f64::from(j) * viewport.dv());
-                let ray_direction = pixel.clone() - self.position();
-                let ray = Ray::new(pixel, ray_direction);
+                let mut color = Color::new(0.0, 0.0, 0.0);
+                for _ in 0..self.samples_per_pixel {
+                    color += self.ray_color(&self.get_ray(i, j), world);
+                }
+                color /= f64::from(self.samples_per_pixel);
 
-                let color = self.ray_color(&ray, world);
-                img.set(i, j, color_get_level(color.x()), color_get_level(color.y()), color_get_level(color.z()));
+                img.set(
+                    i,
+                    j,
+                    color_get_level(color.x()),
+                    color_get_level(color.y()),
+                    color_get_level(color.z()),
+                );
             }
         }
 
         println!("{}", img);
     }
 
+    fn sample_square(&self) -> Vec3 {
+        Vec3::new(fastrand::f64() - 0.5, fastrand::f64() - 0.5, 0.0)
+    }
+
+    fn get_ray(&self, i: u32, j: u32) -> Ray {
+        let offset = self.sample_square();
+        let pixel_sample = self.viewport.origin(self)
+            + ((f64::from(i) + offset.x()) * self.viewport.du())
+            + ((f64::from(j) + offset.y()) * self.viewport.dv());
+
+        Ray::new(self.position.clone(), pixel_sample - self.position.clone())
+    }
+
     fn ray_color(&self, ray: &Ray, world: &HittableList) -> Color {
-        let rayt = Interval::new(0.0, f64::INFINITY);
         let r: f64;
         let g: f64;
         let b: f64;
 
-        match world.hit(&ray, &rayt) {
+        match world.hit(ray, &Interval::new(0.0, f64::INFINITY)) {
             Some(rec) => {
                 let normal = &rec.normal;
                 r = (normal.x() + 1.0) / 2.0;
@@ -124,7 +142,7 @@ impl Viewport {
         let u = self.u.clone();
         let v = self.v.clone();
         let upper_left =
-            c.position() - Vec3::new(0.0, 0.0, c.focal_length()) - (u / 2.0) - (v / 2.0);
+            c.position.clone() - Vec3::new(0.0, 0.0, c.focal_length()) - (u / 2.0) - (v / 2.0);
 
         upper_left + (self.du() + self.dv()) / 2.0
     }
