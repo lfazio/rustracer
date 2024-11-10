@@ -27,10 +27,6 @@ pub struct Viewport {
     dv: Vec3,
 }
 
-fn f64_convert(x: f64) -> u32 {
-    x.round().rem_euclid(2f64.powi(32)) as u32
-}
-
 fn linear_to_gamma(linear_component: f64) -> f64 {
     if linear_component > 0.0 {
         return f64::sqrt(linear_component);
@@ -41,8 +37,8 @@ fn linear_to_gamma(linear_component: f64) -> f64 {
 
 fn color_get_level(v: f64) -> u8 {
     let c = linear_to_gamma(v);
-    let intensity = Interval::new(0.0, 1.0);
-    f64_convert(intensity.clamp(c) * 255_f64) as u8
+    let intensity = Interval::new(0.000, 255.0);
+    intensity.clamp(c * 255_f64) as u32 as u8
 }
 
 impl Camera {
@@ -57,7 +53,7 @@ impl Camera {
         let img_h = if (f64::from(img_w) / ratio) < 1_f64 {
             1
         } else {
-            f64_convert(f64::from(img_w) / ratio)
+            (f64::from(img_w) / ratio) as u32
         };
 
         Camera {
@@ -113,10 +109,6 @@ impl Camera {
     }
 
     fn ray_color(&self, ray: &Ray, depth: u32, world: &HittableList) -> Color {
-        let r: f64;
-        let g: f64;
-        let b: f64;
-
         if depth == 0 {
             return Color::new(0.0, 0.0, 0.0);
         }
@@ -124,18 +116,16 @@ impl Camera {
         match world.hit(ray, &Interval::new(0.001, f64::INFINITY)) {
             Some(rec) => match rec.mat.scatter(ray, &rec) {
                 Some((scattered, attenuation)) => {
-                    return attenuation * self.ray_color(&scattered, depth - 1, world);
+                    attenuation * self.ray_color(&scattered, depth - 1, world)
                 }
-                None => return Color::new(0.0, 0.0, 0.0),
+                None => Color::new(0.0, 0.0, 0.0),
             },
             None => {
-                r = ray.color().x();
-                g = ray.color().y();
-                b = ray.color().z();
+                let a = 0.5_f64 * (ray.direction().normalise().y() + 1.0_f64);
+
+                (1.0 - a) * Color::new(1.0, 1.0, 1.0) + a * Color::new(0.5, 0.7, 1.0)
             }
         }
-
-        Color::new(r, g, b)
     }
 }
 
@@ -152,19 +142,17 @@ impl Viewport {
         }
     }
 
-    pub fn du(&self) -> Vec3 {
-        self.du.clone()
+    pub fn du(&self) -> &Vec3 {
+        &self.du
     }
 
-    pub fn dv(&self) -> Vec3 {
-        self.dv.clone()
+    pub fn dv(&self) -> &Vec3 {
+        &self.dv
     }
 
     pub fn origin(&self, c: &Camera) -> Point3 {
-        let u = self.u.clone();
-        let v = self.v.clone();
         let upper_left =
-            c.position.clone() - Vec3::new(0.0, 0.0, c.focal_length()) - (u / 2.0) - (v / 2.0);
+            &c.position - Vec3::new(0.0, 0.0, c.focal_length()) - (&self.u / 2.0) - (&self.v / 2.0);
 
         upper_left + (self.du() + self.dv()) / 2.0
     }

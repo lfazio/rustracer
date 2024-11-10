@@ -1,10 +1,11 @@
+pub mod dielectric;
 pub mod lambertian;
 pub mod metal;
 
 use crate::{objects::HitRecord, ray::Ray, vec3::Color};
 
 pub trait Material {
-    fn scatter(&self, ray: &Ray, rec: &HitRecord) -> Option<(Ray, Color)> {
+    fn scatter(&self, _ray: &Ray, _rec: &HitRecord) -> Option<(Ray, Color)> {
         None
     }
 }

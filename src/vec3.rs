@@ -3,6 +3,7 @@ extern crate fastrand;
 use std::cmp;
 use std::fmt;
 use std::ops;
+use std::ops::Neg;
 
 #[derive(Debug, Clone, Default)]
 pub struct Vec3 {
@@ -23,19 +24,15 @@ impl Vec3 {
         }
     }
 
-    fn random(&self) -> Vec3 {
-        Vec3 {
-            x: fastrand::f64(),
-            y: fastrand::f64(),
-            z: fastrand::f64(),
-        }
+    fn random() -> f64 {
+        fastrand::f64()
     }
 
     fn random_range(min: f64, max: f64) -> Vec3 {
         Vec3 {
-            x: min + fastrand::f64() * (max - min),
-            y: min + fastrand::f64() * (max - min),
-            z: min + fastrand::f64() * (max - min),
+            x: min + Vec3::random() * (max - min),
+            y: min + Vec3::random() * (max - min),
+            z: min + Vec3::random() * (max - min),
         }
     }
 
@@ -54,12 +51,20 @@ impl Vec3 {
         if on_unit_sphere.dot(normal) > 0.0 {
             on_unit_sphere
         } else {
-            -1.0 * on_unit_sphere
+            -on_unit_sphere
         }
     }
 
-    pub fn reflect(v: Vec3, n: Vec3) -> Vec3 {
-        v.clone() - 2.0 * v.dot(&n) * n
+    pub fn reflect(v: &Vec3, n: &Vec3) -> Vec3 {
+        v - 2.0 * v.dot(n) * n
+    }
+
+    pub fn refract(&self, n: &Vec3, etai_over_etat: f64) -> Vec3 {
+        let cos_theta = f64::min(Vec3::dot(&(-self), n), 1.0);
+        let r_out_perp = etai_over_etat * (self + cos_theta * n);
+        let r_out_parallel = -f64::sqrt(f64::abs(1.0 - r_out_perp.dot(&r_out_perp))) * n;
+
+        &r_out_perp + &r_out_parallel
     }
 
     pub fn x(&self) -> f64 {
@@ -112,7 +117,47 @@ impl cmp::PartialEq for Vec3 {
     }
 }
 
+impl Neg for Vec3 {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Vec3::new(-self.x(), -self.y(), -self.z())
+    }
+}
+
+impl Neg for &Vec3 {
+    type Output = Vec3;
+
+    fn neg(self) -> Self::Output {
+        Vec3::new(-self.x(), -self.y(), -self.z())
+    }
+}
+
 impl ops::Add for Vec3 {
+    type Output = Vec3;
+
+    fn add(self, rhs: Vec3) -> Vec3 {
+        Vec3::new(self.x() + rhs.x(), self.y() + rhs.y(), self.z() + rhs.z())
+    }
+}
+
+impl ops::Add for &Vec3 {
+    type Output = Vec3;
+
+    fn add(self, rhs: &Vec3) -> Vec3 {
+        Vec3::new(self.x() + rhs.x(), self.y() + rhs.y(), self.z() + rhs.z())
+    }
+}
+
+impl ops::Add<&Vec3> for Vec3 {
+    type Output = Vec3;
+
+    fn add(self, rhs: &Vec3) -> Vec3 {
+        Vec3::new(self.x() + rhs.x(), self.y() + rhs.y(), self.z() + rhs.z())
+    }
+}
+
+impl ops::Add<Vec3> for &Vec3 {
     type Output = Vec3;
 
     fn add(self, rhs: Vec3) -> Vec3 {
@@ -129,6 +174,30 @@ impl ops::AddAssign for Vec3 {
 }
 
 impl ops::Sub for Vec3 {
+    type Output = Vec3;
+
+    fn sub(self, rhs: Vec3) -> Vec3 {
+        Vec3::new(self.x() - rhs.x(), self.y() - rhs.y(), self.z() - rhs.z())
+    }
+}
+
+impl ops::Sub for &Vec3 {
+    type Output = Vec3;
+
+    fn sub(self, rhs: &Vec3) -> Vec3 {
+        Vec3::new(self.x() - rhs.x(), self.y() - rhs.y(), self.z() - rhs.z())
+    }
+}
+
+impl ops::Sub<&Vec3> for Vec3 {
+    type Output = Vec3;
+
+    fn sub(self, rhs: &Vec3) -> Vec3 {
+        Vec3::new(self.x() - rhs.x(), self.y() - rhs.y(), self.z() - rhs.z())
+    }
+}
+
+impl ops::Sub<Vec3> for &Vec3 {
     type Output = Vec3;
 
     fn sub(self, rhs: Vec3) -> Vec3 {
@@ -160,6 +229,14 @@ impl ops::Mul<f64> for Vec3 {
     }
 }
 
+impl ops::Mul<f64> for &Vec3 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: f64) -> Vec3 {
+        Vec3::new(self.x() * rhs, self.y() * rhs, self.z() * rhs)
+    }
+}
+
 impl ops::MulAssign<f64> for Vec3 {
     fn mul_assign(&mut self, rhs: f64) {
         self.x *= rhs;
@@ -176,7 +253,23 @@ impl ops::Mul<Vec3> for f64 {
     }
 }
 
+impl ops::Mul<&Vec3> for f64 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: &Vec3) -> Vec3 {
+        Vec3::new(self * rhs.x(), self * rhs.y(), self * rhs.z())
+    }
+}
+
 impl ops::Div<f64> for Vec3 {
+    type Output = Vec3;
+
+    fn div(self, rhs: f64) -> Vec3 {
+        Vec3::new(self.x() / rhs, self.y() / rhs, self.z() / rhs)
+    }
+}
+
+impl ops::Div<f64> for &Vec3 {
     type Output = Vec3;
 
     fn div(self, rhs: f64) -> Vec3 {

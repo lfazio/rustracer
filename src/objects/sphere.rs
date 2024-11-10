@@ -30,7 +30,7 @@ impl Sphere {
 impl Hittable for Sphere {
     fn hit(&self, ray: &Ray, rayt: &Interval) -> Option<HitRecord> {
         let oc = self.o() - ray.origin();
-        let a = ray.direction().dot(&ray.direction());
+        let a = ray.direction().dot(ray.direction());
         let h = ray.direction().dot(&oc);
         let c = oc.dot(&oc) - self.r() * self.r();
         let discriminant = h * h - a * c;
@@ -53,7 +53,7 @@ impl Hittable for Sphere {
         rec.t = root;
         rec.p = ray.at(root);
         rec.mat = self.material.clone();
-        let outward_normal = (ray.at(root) - self.o()) / self.r();
+        let outward_normal = (&rec.p - self.o()) / self.r();
         rec.set_face_normal(ray, &outward_normal);
 
         Some(rec)
