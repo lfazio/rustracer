@@ -3,6 +3,7 @@ mod interval;
 mod material;
 mod objects;
 mod ppm;
+mod radian;
 mod ray;
 mod vec3;
 
@@ -11,16 +12,18 @@ use std::rc::Rc;
 use camera::Camera;
 use material::{dielectric::Dielectric, lambertian::Lambertian, metal::Metal};
 use objects::{sphere, HittableList};
-use vec3::{Color, Point3};
+use vec3::{Color, Point3, Vec3};
 
 fn main() {
     let camera = Camera::new(
-        Point3::new(0.0, 0.0, 0.0),
-        1.0,
-        16_f64 / 9_f64,
+        Point3::new(-2.0, 2.0, 1.0),
+        Point3::new(0.0, 0.0, -1.0),
+        Vec3::new(0.0, 1.0, 0.0),
+        16.0 / 9.0,
         400,
         100,
         50,
+        20.0,
     );
 
     let mut world = HittableList::new();

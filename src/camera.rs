@@ -4,6 +4,7 @@ use crate::{
     interval::Interval,
     objects::{Hittable, HittableList},
     ppm::image::Ppm,
+    radian::Radian,
     ray::Ray,
     vec3::{Color, Point3, Vec3},
 };
@@ -11,11 +12,19 @@ use crate::{
 #[derive(Debug, Default)]
 pub struct Camera {
     position: Point3,
-    f: f64, // focal length
+    lookat: Point3,
+    vup: Vec3,
+    aspect_ratio: f64,
+    u: Vec3,
+    v: Vec3,
+    w: Vec3,
+    focal_length: f64, // focal length
     img_w: u32,
     img_h: u32,
     samples_per_pixel: u32,
     max_depth: u32,
+    vfov: f64,
+
     viewport: Viewport,
 }
 
@@ -23,6 +32,7 @@ pub struct Camera {
 pub struct Viewport {
     u: Vec3,
     v: Vec3,
+    w: Vec3,
     du: Vec3,
     dv: Vec3,
 }
@@ -44,31 +54,52 @@ fn color_get_level(v: f64) -> u8 {
 impl Camera {
     pub fn new(
         position: Point3,
-        f: f64,
-        ratio: f64,
+        lookat: Point3,
+        vup: Vec3,
+        aspect_ratio: f64,
         img_w: u32,
         antialiasing: u32,
         max_depth: u32,
+        vfov: f64,
     ) -> Camera {
-        let img_h = if (f64::from(img_w) / ratio) < 1_f64 {
+        let img_h = if (f64::from(img_w) / aspect_ratio) < 1_f64 {
             1
         } else {
-            (f64::from(img_w) / ratio) as u32
+            (f64::from(img_w) / aspect_ratio) as u32
         };
+
+        // Viewport dimensions
+        let focal_length = (&position - &lookat).norm();
+        let theta = Radian::from(vfov);
+        let h = f64::tan(theta.value / 2.0);
+        let vh = 2.0 * h * focal_length;
+        let vw = vh * aspect_ratio;
+
+        // Calculate the u,v,w unit basis vectors for the camera coordinate frame.
+        let w = (&position - &lookat).normalise();
+        let u = Vec3::cross(&vup, &w).normalise();
+        let v = Vec3::cross(&w, &u);
 
         Camera {
             position,
-            f,
+            lookat,
+            vup,
+            aspect_ratio,
+            u: u.clone(),
+            v: v.clone(),
+            w: w.clone(),
+            focal_length,
             img_w,
             img_h,
             samples_per_pixel: antialiasing,
             max_depth,
-            viewport: Viewport::new(2.0, img_w, img_h),
+            vfov,
+            viewport: Viewport::new(2.0, u, v, w, vw, vh, img_w, img_h),
         }
     }
 
     pub fn focal_length(&self) -> f64 {
-        self.f
+        self.focal_length
     }
 
     pub fn render(&self, world: &HittableList) {
@@ -130,15 +161,16 @@ impl Camera {
 }
 
 impl Viewport {
-    pub fn new(scale: f64, w: u32, h: u32) -> Viewport {
-        let vw = scale * f64::from(w) / f64::from(h);
-        let vh = -scale;
+    pub fn new(scale: f64, u: Vec3, v: Vec3, w: Vec3, width: f64, height: f64, img_w: u32, img_h: u32) -> Viewport {
+        let u_ = width * u; 
+        let v_ = height * -v;
 
         Viewport {
-            u: Vec3::new(vw, 0.0, 0.0),
-            v: Vec3::new(0.0, vh, 0.0),
-            du: Vec3::new(vw / f64::from(w), 0.0, 0.0),
-            dv: Vec3::new(0.0, vh / f64::from(h), 0.0),
+            u: u_.clone(),
+            v: v_.clone(),
+            w,
+            du: u_ / f64::from(img_w),
+            dv: v_ / f64::from(img_h),
         }
     }
 
@@ -152,7 +184,7 @@ impl Viewport {
 
     pub fn origin(&self, c: &Camera) -> Point3 {
         let upper_left =
-            &c.position - Vec3::new(0.0, 0.0, c.focal_length()) - (&self.u / 2.0) - (&self.v / 2.0);
+            &c.position - (c.focal_length() * &self.w) - (&self.u / 2.0) - (&self.v / 2.0);
 
         upper_left + (self.du() + self.dv()) / 2.0
     }
