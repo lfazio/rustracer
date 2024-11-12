@@ -115,8 +115,15 @@ impl Camera {
     pub fn render(&self, world: &HittableList) {
         let mut img = Ppm::new(self.img_w, self.img_h, 256);
 
+        eprintln!("Rendering...");
         for j in 0..self.img_h {
             for i in 0..self.img_w {
+                eprint!(
+                    "\rLine {}/{} - {:02.2}%",
+                    j,
+                    self.img_h,
+                    100.0 * f64::from(i) / f64::from(self.img_w)
+                );
                 let mut color = Color::new(0.0, 0.0, 0.0);
                 for _ in 0..self.samples_per_pixel {
                     color += self.ray_color(&self.get_ray(i, j), self.max_depth, world);
@@ -133,6 +140,7 @@ impl Camera {
             }
         }
 
+        eprintln!("\x33[2K\rDone!");
         println!("{}", img);
     }
 
