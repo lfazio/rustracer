@@ -1,9 +1,9 @@
-extern crate fastrand;
-
 use std::cmp;
 use std::fmt;
 use std::ops;
 use std::ops::Neg;
+
+use crate::rng;
 
 #[derive(Debug, Clone, Default)]
 pub struct Vec3 {
@@ -24,24 +24,16 @@ impl Vec3 {
         }
     }
 
-    fn random() -> f64 {
-        fastrand::f64()
-    }
-
-    fn random_range(min: f64, max: f64) -> Vec3 {
-        Vec3 {
-            x: min + Vec3::random() * (max - min),
-            y: min + Vec3::random() * (max - min),
-            z: min + Vec3::random() * (max - min),
-        }
-    }
-
     pub fn random_unit() -> Vec3 {
         loop {
-            let p = Vec3::random_range(-1.0, 1.0);
+            let p = Vec3::new(
+                rng::random_range(-1.0, 1.0),
+                rng::random_range(-1.0, 1.0),
+                rng::random_range(-1.0, 1.0),
+            );
             let lensq = p.dot(&p);
             if 1e-160 < lensq && lensq < 1.0 {
-                return p / lensq;
+                break p / lensq;
             }
         }
     }
@@ -52,6 +44,19 @@ impl Vec3 {
             on_unit_sphere
         } else {
             -on_unit_sphere
+        }
+    }
+
+    pub fn random_in_unit_disk() -> Vec3 {
+        loop {
+            let p = Vec3::new(
+                rng::random_range(-1.0, 1.0),
+                rng::random_range(-1.0, 1.0),
+                0.0,
+            );
+            if p.dot(&p) < 1.0 {
+                break p;
+            }
         }
     }
 
@@ -335,23 +340,20 @@ mod tests {
 
     #[test]
     fn test_dot() {
-        let v: Vec3 = Vec3::new(1.0, 0.0, 0.0);
-        let z: Vec3 = Vec3::new(0.0, 0.0, 0.0);
-        assert_eq!(v.dot(&z), 0.0);
-        assert_eq!(z.dot(&v), 0.0);
-
         let v1: Vec3 = Vec3::new(1.0, 0.0, 0.0);
+        let z: Vec3 = Vec3::new(0.0, 0.0, 0.0);
+        assert_eq!(v1.dot(&z), 0.0);
+        assert_eq!(z.dot(&v1), 0.0);
+
         let v2: Vec3 = Vec3::new(1.0, 0.0, 0.0);
         assert_eq!(v1.dot(&v2), 1.0);
         assert_eq!(v2.dot(&v1), 1.0);
 
-        let v1: Vec3 = Vec3::new(0.0, 1.0, 0.0);
-        let v2: Vec3 = Vec3::new(1.0, 0.0, 0.0);
+        let v2: Vec3 = Vec3::new(0.0, 1.0, 0.0);
         assert_eq!(v1.dot(&v2), 0.0);
         assert_eq!(v2.dot(&v1), 0.0);
 
-        let v1: Vec3 = Vec3::new(0.0, 0.0, 1.0);
-        let v2: Vec3 = Vec3::new(1.0, 0.0, 0.0);
+        let v2: Vec3 = Vec3::new(0.0, 0.0, 1.0);
         assert_eq!(v1.dot(&v2), 0.0);
         assert_eq!(v2.dot(&v1), 0.0);
 
