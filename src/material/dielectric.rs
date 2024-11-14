@@ -1,10 +1,10 @@
 use crate::{
-    objects::HitRecord,
+    objects::{vector3::Vector3, HitRecord},
     ray::Ray,
-    vec3::{Color, Vec3},
+    rng,
 };
 
-use super::Material;
+use super::{color::Color, Material};
 
 #[derive(Debug, Default, Clone)]
 pub struct Dielectric {
@@ -31,16 +31,16 @@ impl Material for Dielectric {
         } else {
             self.refraction_index
         };
-        let unit_direction = Vec3::normalise(ray.direction());
+        let unit_direction = Vector3::normalise(ray.direction());
         let cos_theta = f64::min((-&unit_direction).dot(&rec.normal), 1.0);
         let sin_theta = f64::sqrt(1.0 - cos_theta * cos_theta);
 
         let cannot_refract = (ri * sin_theta) > 1.0;
 
-        let direction = if cannot_refract || (self.reflectance(cos_theta, ri) > fastrand::f64()) {
-            Vec3::reflect(&unit_direction, &rec.normal)
+        let direction = if cannot_refract || (self.reflectance(cos_theta, ri) > rng::random()) {
+            Vector3::reflect(&unit_direction, &rec.normal)
         } else {
-            Vec3::refract(&unit_direction, &rec.normal, ri)
+            Vector3::refract(&unit_direction, &rec.normal, ri)
         };
 
         Some((

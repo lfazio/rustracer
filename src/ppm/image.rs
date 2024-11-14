@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::ppm::color::PpmColor;
+use crate::{material::color::Color, ppm::color::PpmColor};
 
 #[derive(Debug)]
 pub struct Ppm {
@@ -22,8 +22,8 @@ impl Ppm {
         }
     }
 
-    pub fn set(&mut self, x: u32, y: u32, r: u8, g: u8, b: u8) {
-        self.body[(y * self.w + x) as usize].set(r, g, b)
+    pub fn set(&mut self, x: u32, y: u32, color: Color) {
+        self.body[(y * self.w + x) as usize].set(&PpmColor::from(color))
     }
 }
 

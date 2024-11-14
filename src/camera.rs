@@ -2,28 +2,28 @@ extern crate fastrand;
 
 use crate::{
     interval::Interval,
-    objects::{Hittable, HittableList},
+    material::color::Color,
+    objects::{point3::Point3, vector3::Vector3, Hittable, HittableList},
     ppm::image::Ppm,
     ray::Ray,
     rng,
-    vec3::{Color, Point3, Vec3},
 };
 
 #[derive(Debug, Default)]
 pub struct Camera {
     position: Point3,         // Point camera is looking from
     lookat: Point3,           // Point camera is looking at
-    vup: Vec3,                // Camera-relative "up" direction
+    vup: Vector3,             // Camera-relative "up" direction
     aspect_ratio: f64,        // Ratio of image width over height
     img_w: u32,               // Rendered image width in pixel count
     img_h: u32,               // Rendered image height in pixel count
     samples_per_pixel: usize, // Count of random samples for each pixel
     max_depth: usize,
-    vfov: f64,            // Vertical view angle (field of view)
-    focus_dist: f64,      // Distance from camera lookfrom point to plane of perfect focus
-    defocus_angle: f64,   // Variation angle of rays through each pixel
-    defocus_disk_u: Vec3, // Defocus disk horizontal radius
-    defocus_disk_v: Vec3, // Defocus disk vertical radius
+    vfov: f64,               // Vertical view angle (field of view)
+    focus_dist: f64,         // Distance from camera lookfrom point to plane of perfect focus
+    defocus_angle: f64,      // Variation angle of rays through each pixel
+    defocus_disk_u: Vector3, // Defocus disk horizontal radius
+    defocus_disk_v: Vector3, // Defocus disk vertical radius
 
     viewport: Viewport,
 }
@@ -31,22 +31,8 @@ pub struct Camera {
 #[derive(Debug, Default)]
 pub struct Viewport {
     origin: Point3,
-    du: Vec3,
-    dv: Vec3,
-}
-
-fn linear_to_gamma(linear_component: f64) -> f64 {
-    if linear_component > 0.0 {
-        return f64::sqrt(linear_component);
-    }
-
-    0.0
-}
-
-fn color_get_level(v: f64) -> u8 {
-    let c = linear_to_gamma(v);
-    let intensity = Interval::new(0.000, 255.0);
-    intensity.clamp(c * 255_f64) as u32 as u8
+    du: Vector3,
+    dv: Vector3,
 }
 
 impl Camera {
@@ -65,7 +51,7 @@ impl Camera {
     pub fn new(
         position: Point3,
         lookat: Point3,
-        vup: Vec3,
+        vup: Vector3,
         aspect_ratio: f64,
         img_w: u32,
         vfov: f64,
@@ -85,7 +71,7 @@ impl Camera {
         let vw = vh * aspect_ratio;
 
         // Calculate the u,v,w unit basis vectors for the camera coordinate frame.
-        let w = (&position - &lookat).normalise();
+        let w = Vector3::from(&position - &lookat).normalise();
         let u = vup.cross(&w).normalise();
         let v = w.cross(&u);
 
@@ -119,10 +105,10 @@ impl Camera {
         for j in 0..self.img_h {
             for i in 0..self.img_w {
                 eprint!(
-                    "\rLine {}/{} - {:02.2}%",
+                    "\rLine {}/{} - {:.2}% ",
                     j,
                     self.img_h,
-                    100.0 * f64::from(i) / f64::from(self.img_w)
+                    f64::from(i * 100) / f64::from(self.img_w)
                 );
                 let mut color = Color::new(0.0, 0.0, 0.0);
                 for _ in 0..self.samples_per_pixel {
@@ -130,22 +116,16 @@ impl Camera {
                 }
                 color /= f64::from(self.samples_per_pixel as u32);
 
-                img.set(
-                    i,
-                    j,
-                    color_get_level(color.x()),
-                    color_get_level(color.y()),
-                    color_get_level(color.z()),
-                );
+                img.set(i, j, color);
             }
         }
 
-        eprintln!("\x33[2K\rDone!");
+        eprintln!("\rDone!");
         println!("{}", img);
     }
 
-    fn sample_square(&self) -> Vec3 {
-        Vec3::new(
+    fn sample_square(&self) -> Vector3 {
+        Vector3::new(
             rng::random_range(-0.5, 0.5),
             rng::random_range(-0.5, 0.5),
             0.0,
@@ -154,8 +134,8 @@ impl Camera {
 
     fn defocus_disk_sample(&self) -> Point3 {
         // Returns a random point in the camera defocus disk.
-        let p = Vec3::random_in_unit_disk();
-        &self.position + (p.x() * &self.defocus_disk_u) + (p.y() * &self.defocus_disk_v)
+        let p = Vector3::new_random_in_unit_disk();
+        &self.position + &(p.x() * &self.defocus_disk_u) + &(p.y() * &self.defocus_disk_v)
     }
 
     fn get_ray(&self, i: u32, j: u32) -> Ray {
@@ -171,12 +151,15 @@ impl Camera {
         } else {
             self.defocus_disk_sample()
         };
-        Ray::new(ray_origin.clone(), &pixel_sample - &ray_origin)
+        Ray::new(
+            ray_origin.clone(),
+            Vector3::from(&pixel_sample - &ray_origin),
+        )
     }
 
     fn ray_color(&self, ray: &Ray, depth: usize, world: &HittableList) -> Color {
         if depth == 0 {
-            return Color::new(0.0, 0.0, 0.0);
+            return Color::default();
         }
 
         match world.hit(ray, &Interval::new(0.001, f64::INFINITY)) {
@@ -184,12 +167,12 @@ impl Camera {
                 Some((scattered, attenuation)) => {
                     attenuation * self.ray_color(&scattered, depth - 1, world)
                 }
-                None => Color::new(0.0, 0.0, 0.0),
+                None => Color::default(),
             },
             None => {
                 let a = 0.5_f64 * (ray.direction().normalise().y() + 1.0_f64);
 
-                (1.0 - a) * Color::new(1.0, 1.0, 1.0) + a * Color::new(0.5, 0.7, 1.0)
+                (1.0 - a) * &Color::new(1.0, 1.0, 1.0) + a * &Color::new(0.5, 0.7, 1.0)
             }
         }
     }
@@ -199,9 +182,9 @@ impl Viewport {
     pub fn new(
         camera_position: &Point3,
         camera_focus_dist: f64,
-        u: &Vec3,
-        v: &Vec3,
-        w: &Vec3,
+        u: &Vector3,
+        v: &Vector3,
+        w: &Vector3,
         vsize: (f64, f64),
         imgsize: (u32, u32),
     ) -> Viewport {
@@ -223,11 +206,11 @@ impl Viewport {
         }
     }
 
-    pub fn du(&self) -> &Vec3 {
+    pub fn du(&self) -> &Vector3 {
         &self.du
     }
 
-    pub fn dv(&self) -> &Vec3 {
+    pub fn dv(&self) -> &Vector3 {
         &self.dv
     }
 

@@ -1,16 +1,19 @@
 use std::rc::Rc;
 
+pub mod point3;
 pub mod sphere;
+pub mod vector3;
 
 use crate::interval::Interval;
 use crate::material::{DefaultMaterial, Material};
+use crate::objects::point3::Point3;
+use crate::objects::vector3::Vector3;
 use crate::ray::Ray;
-use crate::vec3::{Point3, Vec3};
 
 #[derive(Clone)]
 pub struct HitRecord {
     pub p: Point3,
-    pub normal: Vec3,
+    pub normal: Vector3,
     pub t: f64,
     pub front_face: bool,
     pub mat: Rc<dyn Material>,
@@ -19,16 +22,16 @@ pub struct HitRecord {
 impl HitRecord {
     pub fn new() -> HitRecord {
         HitRecord {
-            p: Point3::new(0.0, 0.0, 0.0),
-            normal: Vec3::new(0.0, 0.0, 0.0),
+            p: Point3::default(),
+            normal: Vector3::default(),
             t: 0.0,
             front_face: false,
             mat: Rc::new(DefaultMaterial::default()),
         }
     }
 
-    fn set_face_normal(&mut self, ray: &Ray, outward_normal: &Vec3) {
-        self.front_face = Vec3::dot(ray.direction(), outward_normal) < 0.0;
+    fn set_face_normal(&mut self, ray: &Ray, outward_normal: &Vector3) {
+        self.front_face = Vector3::dot(ray.direction(), outward_normal) < 0.0;
         self.normal = if self.front_face {
             outward_normal.clone()
         } else {
@@ -64,11 +67,11 @@ impl<'t> HittableList<'t> {
 impl<'t> Hittable for HittableList<'t> {
     fn hit(&self, ray: &Ray, rayt: &Interval) -> Option<HitRecord> {
         let mut hit_anything: bool = false;
-        let mut closest_so_far = rayt.max;
+        let mut closest_so_far = rayt.max();
         let mut temp_rec = HitRecord::new();
 
         for o in &self.objects {
-            let interval = Interval::new(rayt.min, closest_so_far);
+            let interval = Interval::new(rayt.min(), closest_so_far);
             if let Some(hr) = o.hit(ray, &interval) {
                 hit_anything = true;
                 closest_so_far = hr.t;

@@ -5,21 +5,21 @@ mod objects;
 mod ppm;
 mod ray;
 mod rng;
-mod vec3;
 
+use std::rc::Rc;
 use std::vec::Vec;
-use std::{borrow::BorrowMut, rc::Rc};
 
 use camera::Camera;
-use material::{dielectric::Dielectric, lambertian::Lambertian, metal::Metal};
+use material::{color::Color, dielectric::Dielectric, lambertian::Lambertian, metal::Metal};
+use objects::point3::Point3;
+use objects::vector3::Vector3;
 use objects::{sphere, Hittable, HittableList};
-use vec3::{Color, Point3, Vec3};
 
 fn main() {
     let mut camera = Camera::new(
         Point3::new(13.0, 2.0, 3.0),
-        Point3::new(0.0, 0.0, 0.0),
-        Vec3::new(0.0, 1.0, 0.0),
+        Point3::default(),
+        Vector3::new(0.0, 1.0, 0.0),
         16.0 / 9.0,
         1200,
         20.0,
@@ -45,7 +45,7 @@ fn main() {
                 f64::from(b as i32 - 11) + 0.9 * rng::random(),
             );
 
-            if (&center - &p).norm() > 0.9 {
+            if Vector3::from(&center - &p).norm() > 0.9 {
                 let sphere_material: Rc<dyn material::Material> = match choose_mat {
                     0.0..0.8 => {
                         // diffuse
