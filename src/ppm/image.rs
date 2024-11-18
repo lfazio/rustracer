@@ -22,7 +22,7 @@ impl Ppm {
         }
     }
 
-    pub fn set(&mut self, x: u32, y: u32, color: Color) {
+    pub fn set(&mut self, x: u32, y: u32, color: &Color) {
         self.body[(y * self.w + x) as usize].set(&PpmColor::from(color))
     }
 }

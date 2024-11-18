@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, DivAssign, Mul};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul};
 
 use crate::interval::Interval;
 
@@ -205,6 +205,39 @@ impl Mul<&Color> for &f64 {
 
     fn mul(self, other: &Color) -> Self::Output {
         Color::new(other.r() * self, other.g() * self, other.b() * self)
+    }
+}
+
+
+impl Div<f64> for Color {
+    type Output = Self;
+
+    fn div(self, other: f64) -> Self::Output {
+        Color::new(self.r() / other, self.g() / other, self.b() / other)
+    }
+}
+
+impl Div<&f64> for Color {
+    type Output = Self;
+
+    fn div(self, other: &f64) -> Self::Output {
+        Color::new(self.r() / other, self.g() / other, self.b() / other)
+    }
+}
+
+impl Div<f64> for &Color {
+    type Output = Color;
+
+    fn div(self, other: f64) -> Self::Output {
+        Color::new(self.r() / other, self.g() / other, self.b() / other)
+    }
+}
+
+impl Div<&f64> for &Color {
+    type Output = Color;
+
+    fn div(self, other: &f64) -> Self::Output {
+        Color::new(self.r() / other, self.g() / other, self.b() / other)
     }
 }
 
