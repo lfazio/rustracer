@@ -208,7 +208,6 @@ impl Mul<&Color> for &f64 {
     }
 }
 
-
 impl Div<f64> for Color {
     type Output = Self;
 

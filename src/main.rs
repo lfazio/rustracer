@@ -44,6 +44,7 @@ fn main() {
                 0.2,
                 f64::from(b as i32 - 11) + 0.9 * rng::random(),
             );
+            let motion: Option<Point3>;
 
             if Vector3::from(&center - &p).norm() > 0.9 {
                 let sphere_material: Rc<dyn material::Material> = match choose_mat {
@@ -54,6 +55,8 @@ fn main() {
                             rng::random() * rng::random(),
                             rng::random() * rng::random(),
                         );
+                        motion =
+                            Some(&center + Vector3::new(0.0, rng::random_range(0.0, 0.5), 0.0));
                         Rc::new(Lambertian::new(albedo))
                     }
                     0.8..0.95 => {
@@ -64,15 +67,20 @@ fn main() {
                             rng::random_range(0.5, 1.0),
                         );
                         let fuzz = rng::random_range(0.0, 0.5);
+                        motion = None;
                         Rc::new(Metal::new(albedo, fuzz))
                     }
                     _ => {
                         // glass
+                        motion = None;
                         Rc::new(Dielectric::new(1.50))
                     }
                 };
 
-                let binding = sphere::Sphere::new(center, 0.2, sphere_material);
+                let binding = match motion {
+                    Some(c2) => sphere::Sphere::with_motion(center, c2, 0.2, sphere_material),
+                    None => sphere::Sphere::new(center, 0.2, sphere_material),
+                };
                 sphere.push(binding);
             }
         }

@@ -23,7 +23,7 @@ impl Material for Metal {
         let mut reflected = Vector3::reflect(ray.direction(), &rec.normal);
 
         reflected = reflected.normalise() + (self.fuzz * Vector3::new_random_unit());
-        let scattered = Ray::new(rec.p.clone(), reflected);
+        let scattered = Ray::with_motion(rec.p.clone(), reflected, ray.time());
         if scattered.direction().dot(&rec.normal) > 0.0 {
             return Some((scattered, self.albedo.clone()));
         }

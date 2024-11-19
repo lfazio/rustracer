@@ -103,24 +103,24 @@ impl Camera {
 
         eprintln!("Rendering...");
         for j in 0..self.img_h {
-            for i in 0..self.img_w {
-                eprint!(
-                    "\rLine {}/{} - {:.2}% ",
-                    j,
-                    self.img_h,
-                    f64::from(i * 100) / f64::from(self.img_w)
-                );
-                let mut color = Color::new(0.0, 0.0, 0.0);
-                for _ in 0..self.samples_per_pixel {
-                    color += self.ray_color(&self.get_ray(i, j), self.max_depth, world);
-                }
-                color /= f64::from(self.samples_per_pixel as u32);
+            eprint!("\r\x1b[2KLine {}/{}", j, self.img_h,);
+            let line: Vec<_> = (0..self.img_w)
+                .map(|i| {
+                    let mut color = Color::new(0.0, 0.0, 0.0);
+                    for _ in 0..self.samples_per_pixel {
+                        color += self.ray_color(&self.get_ray(i, j), self.max_depth, world);
+                    }
 
-                img.set(i, j, color);
+                    color / f64::from(self.samples_per_pixel as u32)
+                })
+                .collect();
+
+            for (i, pixel_color) in line.iter().enumerate() {
+                img.set(i as u32, j, pixel_color);
             }
         }
 
-        eprintln!("\rDone!");
+        eprintln!("\r\x1b[2KDone!");
         println!("{}", img);
     }
 
@@ -151,9 +151,10 @@ impl Camera {
         } else {
             self.defocus_disk_sample()
         };
-        Ray::new(
+        Ray::with_motion(
             ray_origin.clone(),
             Vector3::from(&pixel_sample - &ray_origin),
+            rng::random(),
         )
     }
 

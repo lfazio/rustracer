@@ -44,7 +44,7 @@ impl Material for Dielectric {
         };
 
         Some((
-            Ray::new(rec.p.clone(), direction),
+            Ray::with_motion(rec.p.clone(), direction, ray.time()),
             Color::new(1.0, 1.0, 1.0),
         ))
     }
