@@ -5,6 +5,8 @@ pub mod point3;
 pub mod vector3;
 pub mod sphere;
 
+use aabb::Aabb;
+
 use crate::interval::Interval;
 use crate::material::{DefaultMaterial, Material};
 use crate::objects::point3::Point3;
@@ -43,21 +45,26 @@ impl HitRecord {
 
 pub trait Hittable {
     fn hit(&self, ray: &Ray, rayt: &Interval) -> Option<HitRecord>;
+
+    fn bounding_box(&self) -> &Aabb;
 }
 
 pub struct HittableList<'t> {
-    pub objects: Vec<Rc<&'t dyn Hittable>>,
+    objects: Vec<Rc<&'t dyn Hittable>>,
+    bbox: Aabb,
 }
 
 impl<'t> HittableList<'t> {
     pub fn new() -> HittableList<'t> {
         HittableList {
             objects: Vec::new(),
+            bbox: Aabb::default(),
         }
     }
 
     pub fn add(&mut self, o: &'t dyn Hittable) {
         self.objects.push(Rc::<&dyn Hittable>::new(o));
+        self.bbox = Aabb::new_enclosing(&self.bbox, o.bounding_box());
     }
 
     pub fn clear(&mut self) {
@@ -85,5 +92,9 @@ impl<'t> Hittable for HittableList<'t> {
         }
 
         None
+    }
+
+    fn bounding_box(&self) -> &Aabb {
+        &self.bbox
     }
 }

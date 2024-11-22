@@ -7,30 +7,37 @@ use crate::objects::vector3::Vector3;
 use crate::objects::{HitRecord, Hittable};
 use crate::ray::Ray;
 
+use super::aabb::Aabb;
+
 #[derive(Clone)]
 pub struct Sphere {
     o: Point3,
     r: f64,
     material: Rc<dyn Material>,
     center: Ray,
+
+    bbox: Aabb,
 }
 
 impl Sphere {
     pub fn new(o: Point3, r: f64, material: Rc<dyn Material>) -> Sphere {
-        Sphere {
-            o: o.clone(),
-            r,
-            material,
-            center: Ray::new(o, Vector3::default()),
-        }
+        Sphere::with_motion(o.clone(), o, r, material)
     }
 
     pub fn with_motion(o: Point3, o2: Point3, r: f64, material: Rc<dyn Material>) -> Sphere {
+        let center = Ray::new(o.clone(), Vector3::from(&o2 - &o));
+        let rvec = Vector3::new(r, r, r);
+        let box1 = Aabb::from(&(center.at(0.0) - &rvec), &(center.at(0.0) + &rvec));
+        let box2 = Aabb::from(&(center.at(1.0) - &rvec), &(center.at(1.0) + &rvec));
+        let bbox = Aabb::new_enclosing(&box1, &box2);
+
         Sphere {
             o: o.clone(),
             r,
             material,
-            center: Ray::new(o.clone(), Vector3::from(&o2 - &o)),
+            center,
+
+            bbox,
         }
     }
 
@@ -40,6 +47,10 @@ impl Sphere {
 
     pub fn r(&self) -> f64 {
         self.r
+    }
+
+    pub fn bounding_box(&self) -> &Aabb {
+        &self.bbox
     }
 }
 
@@ -74,5 +85,9 @@ impl Hittable for Sphere {
         rec.set_face_normal(ray, &outward_normal);
 
         Some(rec)
+    }
+
+    fn bounding_box(&self) -> &Aabb {
+        &self.bbox
     }
 }
