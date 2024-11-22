@@ -1,8 +1,9 @@
 use std::rc::Rc;
 
+pub mod aabb;
 pub mod point3;
-pub mod sphere;
 pub mod vector3;
+pub mod sphere;
 
 use crate::interval::Interval;
 use crate::material::{DefaultMaterial, Material};
