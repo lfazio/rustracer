@@ -40,6 +40,10 @@ impl Interval {
 
         x
     }
+
+    pub fn expand(&self, delta: &f64) -> Interval {
+        Interval::new(self.min - delta / 2.0, self.max + delta / 2.0)
+    }
 }
 
 impl std::default::Default for Interval {
