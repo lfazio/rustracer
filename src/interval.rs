@@ -13,8 +13,16 @@ impl Interval {
         self.min
     }
 
+    pub fn set_min(&mut self, min: f64) {
+        self.min = min;
+    }
+
     pub fn max(&self) -> f64 {
         self.max
+    }
+
+    pub fn set_max(&mut self, max: f64) {
+        self.max = max;
     }
 
     pub fn size(&self) -> f64 {
